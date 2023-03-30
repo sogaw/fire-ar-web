@@ -1,0 +1,30 @@
+{
+  "name": "fire-ar-web",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "emu": "firebase emulators:start --project fire-hose-web-test",
+    "prepare": "yarn build"
+  },
+  "dependencies": {
+    "firebase": "^9.8.1"
+  },
+  "devDependencies": {
+    "@types/request": "^2.48.8",
+    "@typescript-eslint/eslint-plugin": "^5.26.0",
+    "@typescript-eslint/parser": "^5.26.0",
+    "eslint": "^8.16.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-simple-import-sort": "^7.0.0",
+    "firebase-tools": "^11.0.1",
+    "prettier": "^2.6.2",
+    "request": "^2.88.2",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.7.2",
+    "vitest": "^0.12.9"
+  }
+}
