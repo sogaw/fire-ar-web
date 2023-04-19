@@ -8,6 +8,7 @@ import {
   Query,
   query,
   setDoc,
+  writeBatch,
 } from 'firebase/firestore';
 
 import { FireCollection, FireCollectionGroup, FireDocument } from '@/index';
@@ -43,6 +44,10 @@ class PostsCollection extends FireCollection<PostDoc> {
   constructor(ref: CollectionReference) {
     super(ref, (ref) => PostDoc.fromSnapshot(ref));
   }
+
+  orderedByContentAsc() {
+    return this.findManyByQuery((ref) => query(ref, orderBy('content', 'asc')));
+  }
 }
 
 class PostsCollectionGroup extends FireCollectionGroup<PostDoc> {
@@ -56,8 +61,9 @@ class PostsCollectionGroup extends FireCollectionGroup<PostDoc> {
 }
 
 // Connect DB
-const usersRef = collection(getDb(), 'users');
-const postsRefGroup = collectionGroup(getDb(), 'posts');
+const db = getDb();
+const usersRef = collection(db, 'users');
+const postsRefGroup = collectionGroup(db, 'posts');
 const usersCollection = new UsersCollection(usersRef);
 const postsCollectionGroup = new PostsCollectionGroup(postsRefGroup);
 
@@ -131,12 +137,12 @@ describe('Collection', () => {
 });
 
 describe('CollectionGroup', () => {
-  const userOnePostsRef = collection(usersRef, '1', 'posts');
-
   beforeEach(async () => {
-    await setDoc(doc(userOnePostsRef, '1'), { __id: '1', content: 'post-1' });
-    await setDoc(doc(userOnePostsRef, '2'), { __id: '2', content: 'post-2' });
-    await setDoc(doc(userOnePostsRef, '3'), { __id: '3', content: 'post-3' });
+    const userPostsRef = collection(usersRef, '1', 'posts');
+
+    await setDoc(doc(userPostsRef, '1'), { __id: '1', content: 'post-1' });
+    await setDoc(doc(userPostsRef, '2'), { __id: '2', content: 'post-2' });
+    await setDoc(doc(userPostsRef, '3'), { __id: '3', content: 'post-3' });
   });
 
   it('findOne', async () => {
@@ -160,6 +166,40 @@ describe('CollectionGroup', () => {
   it('findManyByQuery', async () => {
     const posts = await postsCollectionGroup.orderedByContentDesc();
 
-    expect(posts.map((p) => p.id)).toStrictEqual(['3', '2', '1']);
+    expect(posts.map((p) => p.data.content)).toStrictEqual(['post-3', 'post-2', 'post-1']);
+  });
+});
+
+describe('Sub Collection', () => {
+  let user: UserDoc;
+
+  beforeEach(async () => {
+    const batch = writeBatch(db);
+
+    user = UserDoc.build(usersCollection, '1', { name: 'user-1' });
+    const postsData: PostData[] = [
+      { __id: '1', content: 'post-1' },
+      { __id: '2', content: 'post-2' },
+      { __id: '3', content: 'post-3' },
+    ];
+    const posts = postsData.map((data) => PostDoc.build(user.postsCollection, data.__id, data));
+
+    batch.set(...user.toBatchInput());
+    posts.forEach((post) => batch.set(...post.toBatchInput()));
+
+    await batch.commit();
+  });
+
+  it('findOne', async () => {
+    const post = await user.postsCollection.findOne('1');
+
+    expect(post.id).toBe('1');
+    expect(post.data).toStrictEqual({ __id: '1', content: 'post-1' });
+  });
+
+  it('findManyByQuery', async () => {
+    const posts = await user.postsCollection.orderedByContentAsc();
+
+    expect(posts.map((p) => p.data.content)).toStrictEqual(['post-1', 'post-2', 'post-3']);
   });
 });
