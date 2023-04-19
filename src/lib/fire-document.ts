@@ -2,38 +2,45 @@ import {
   CollectionReference,
   deleteDoc,
   doc,
+  DocumentData,
   DocumentReference,
   DocumentSnapshot,
   setDoc,
 } from 'firebase/firestore';
 
-type Collection<TData> = { ref: CollectionReference<TData> };
+type Constructor<T, TData extends DocumentData> = {
+  new (id: string, ref: DocumentReference, data: TData): T;
+};
 
-type Constructor<T, TData> = { new (id: string, ref: DocumentReference<TData>, data: TData): T };
+type FireDocumentObject<TData extends DocumentData> = {
+  id: string;
+  ref: DocumentReference;
+} & TData;
 
-type FireDocumentObject<TData> = { id: string; ref: DocumentReference<TData> } & TData;
+export class FireDocument<TData extends DocumentData> {
+  constructor(public id: string, public ref: DocumentReference, public data: TData) {}
 
-export class FireDocument<TData> {
-  constructor(public id: string, public ref: DocumentReference<TData>, public data: TData) {}
-
-  static build<T, TData>(
+  static build<T, TData extends DocumentData>(
     this: Constructor<T, TData>,
-    collection: Collection<TData>,
+    { ref }: { ref: CollectionReference },
     id: string | null,
     data: TData
   ) {
-    const docRef = id ? doc(collection.ref, id) : doc(collection.ref);
+    const docRef = id ? doc(ref, id) : doc(ref);
     return new this(docRef.id, docRef, data);
   }
 
-  static fromSnapshot<T, TData>(
+  static fromSnapshot<T, TData extends DocumentData>(
     this: Constructor<T, TData>,
-    snapshot: Pick<DocumentSnapshot<TData>, 'id' | 'ref' | 'data'>
+    snapshot: DocumentSnapshot
   ) {
     return new this(snapshot.id, snapshot.ref, snapshot.data() as TData);
   }
 
-  static fromObject<T, TData>(this: Constructor<T, TData>, object: FireDocumentObject<TData>) {
+  static fromObject<T, TData extends DocumentData>(
+    this: Constructor<T, TData>,
+    object: FireDocumentObject<TData>
+  ) {
     const { id, ref, ...data } = object;
     return new this(id, ref, data as unknown as TData);
   }

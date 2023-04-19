@@ -1,6 +1,6 @@
 {
   "name": "fire-ar-web",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "license": "MIT",
@@ -9,12 +9,14 @@
     "url": "https://github.com/so-ga/fire-ar-web"
   },
   "scripts": {
-    "build": "rimraf ./dist && tsc",
+    "prebuild": "rimraf ./dist",
+    "build": "tsc",
     "emu": "firebase emulators:start --project fire-hose-web-test",
+    "emu:kill": "lsof -t -i:4000 -i:8080 | xargs kill -9",
     "prepare": "yarn build"
   },
   "dependencies": {
-    "firebase": "^9.8.1"
+    "firebase": "^9.20.0"
   },
   "devDependencies": {
     "@types/request": "^2.48.8",

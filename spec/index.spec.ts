@@ -15,6 +15,7 @@ import { FireCollection, FireCollectionGroup, FireDocument } from '@/index';
 import { getDb } from './test-setup';
 import { clearFirestore } from './test-utils';
 
+// Schema Define
 interface UserData {
   name: string;
 }
@@ -28,7 +29,7 @@ interface PostData {
 }
 class PostDoc extends FireDocument<PostData> {}
 
-class UsersCollection extends FireCollection<UserData, UserDoc> {
+class UsersCollection extends FireCollection<UserDoc> {
   constructor(ref: CollectionReference) {
     super(ref, (ref) => UserDoc.fromSnapshot(ref));
   }
@@ -38,13 +39,13 @@ class UsersCollection extends FireCollection<UserData, UserDoc> {
   }
 }
 
-class PostsCollection extends FireCollection<PostData, PostDoc> {
+class PostsCollection extends FireCollection<PostDoc> {
   constructor(ref: CollectionReference) {
     super(ref, (ref) => PostDoc.fromSnapshot(ref));
   }
 }
 
-class PostsCollectionGroup extends FireCollectionGroup<PostData, PostDoc> {
+class PostsCollectionGroup extends FireCollectionGroup<PostDoc> {
   constructor(ref: Query) {
     super(ref, '__id', (ref) => PostDoc.fromSnapshot(ref));
   }
@@ -54,11 +55,13 @@ class PostsCollectionGroup extends FireCollectionGroup<PostData, PostDoc> {
   }
 }
 
+// Connect DB
 const usersRef = collection(getDb(), 'users');
 const postsRefGroup = collectionGroup(getDb(), 'posts');
 const usersCollection = new UsersCollection(usersRef);
 const postsCollectionGroup = new PostsCollectionGroup(postsRefGroup);
 
+// Test
 beforeEach(async () => {
   await clearFirestore();
 });

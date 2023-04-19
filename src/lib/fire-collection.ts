@@ -1,6 +1,7 @@
 import {
   CollectionReference,
   doc,
+  DocumentData,
   DocumentSnapshot,
   getDoc,
   getDocs,
@@ -9,14 +10,12 @@ import {
   where,
 } from 'firebase/firestore';
 
-type Snapshot<TData> = Pick<DocumentSnapshot<TData>, 'id' | 'ref' | 'data'>;
+export class FireCollection<TTransformed extends { data: DocumentData }> {
+  ref: CollectionReference;
+  transformer: (snap: DocumentSnapshot) => TTransformed;
 
-export class FireCollection<TData, TTransformed> {
-  ref: CollectionReference<TData>;
-  transformer: (snap: Snapshot<TData>) => TTransformed;
-
-  constructor(ref: CollectionReference, transformer: (snap: Snapshot<TData>) => TTransformed) {
-    this.ref = ref as CollectionReference<TData>;
+  constructor(ref: CollectionReference, transformer: (snap: DocumentSnapshot) => TTransformed) {
+    this.ref = ref;
     this.transformer = transformer;
   }
 
@@ -24,41 +23,33 @@ export class FireCollection<TData, TTransformed> {
     const snap = await getDoc(doc(this.ref, id));
     if (!snap.exists() || !snap.data())
       throw new Error('snap.exists() or snap.data() are undefined');
-    return this.transformer({
-      id: snap.id,
-      ref: snap.ref,
-      data: () => snap.data(),
-    });
+    return this.transformer(snap);
   }
 
   async findOneById(id: string) {
     const snap = await getDoc(doc(this.ref, id));
     if (!snap.exists() || !snap.data()) return undefined;
-    return this.transformer({
-      id: snap.id,
-      ref: snap.ref,
-      data: () => snap.data(),
-    });
+    return this.transformer(snap);
   }
 
-  async findManyByQuery(queryFn: (ref: CollectionReference<TData>) => Query<TData>) {
+  async findManyByQuery(queryFn: (ref: CollectionReference) => Query) {
     const snap = await getDocs(queryFn(this.ref));
     return snap.docs.map(this.transformer);
   }
 }
 
-export class FireCollectionGroup<TData, TTransformed> {
-  ref: Query<TData>;
+export class FireCollectionGroup<TTransformed extends { data: DocumentData }> {
+  ref: Query;
   idField: string;
-  transformer: (snap: Snapshot<TData>) => TTransformed;
+  transformer: (snap: DocumentSnapshot) => TTransformed;
 
   constructor(
     ref: Query,
-    idField: keyof TData,
-    transformer: (snap: Snapshot<TData>) => TTransformed
+    idField: keyof TTransformed['data'],
+    transformer: (snap: DocumentSnapshot) => TTransformed
   ) {
     if (typeof idField !== 'string') throw new Error('idField not string');
-    this.ref = ref as Query<TData>;
+    this.ref = ref;
     this.idField = idField;
     this.transformer = transformer;
   }
@@ -74,7 +65,7 @@ export class FireCollectionGroup<TData, TTransformed> {
     return this.findOne(id).catch(() => undefined);
   }
 
-  async findManyByQuery(queryFn: (ref: Query<TData>) => Query<TData>) {
+  async findManyByQuery(queryFn: (ref: Query) => Query) {
     const snap = await getDocs(queryFn(this.ref));
     return snap.docs.map(this.transformer);
   }
